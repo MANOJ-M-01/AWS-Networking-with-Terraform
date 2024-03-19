@@ -39,3 +39,10 @@ variable "ec2_name" {
   type        = string
   default     = "MyTestEC2"
 }
+
+variable "nat_name" {
+  description = "Value of the Name for NAT Gateway"
+  type        = string
+  default     = "my-nat"
+}
+

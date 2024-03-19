@@ -22,3 +22,11 @@ ubuntu 22.04 ami-080e1f13689e07408
 Outputs:
 
 ````
+
+### Terraform to diagram
+
+https://developer.hashicorp.com/terraform/cli/commands/graph  
+
+````sh 
+terraform graph -type=plan | dot -Tpng >graph.png
+````
