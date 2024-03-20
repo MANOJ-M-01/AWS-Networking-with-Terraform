@@ -15,27 +15,27 @@ resource "aws_vpc" "my_vpc" {
 
 # Public Subnet
 resource "aws_subnet" "PublicSubnet" {
-  vpc_id     = aws_vpc.my_test_vpc.id
-  cidr_block = var.subnet_cidr
+  vpc_id     = aws_vpc.my_vpc.id
+  cidr_block = var.public_subnet_cidr
 
   tags = {
-    Name = var.subnet_name
+    Name = var.public_subnet_name
   }
 }
 
 # Private Subnet
 resource "aws_subnet" "PrivateSubnet" {
-  vpc_id     = aws_vpc.my_test_vpc.id
-  cidr_block = var.subnet_cidr
+  vpc_id     = aws_vpc.my_vpc.id
+  cidr_block = var.private_subnet_cidr
 
   tags = {
-    Name = var.subnet_name
+    Name = var.private_subnet_name
   }
 }
 
 # Create a route to the internet
 resource "aws_internet_gateway" "IGW" {
-  vpc_id = aws_vpc.my_test_vpc.id
+  vpc_id = aws_vpc.my_vpc.id
 
   tags = {
     Name = var.igw_name
@@ -43,8 +43,8 @@ resource "aws_internet_gateway" "IGW" {
 }
 
 # Create a route to the NAT GateWay
-resource "aws_nat_gateway" "IGW" {
-  subnet_id = PrivateSubnet.id
+resource "aws_nat_gateway" "NATGateWay" {
+  subnet_id = aws_subnet.PrivateSubnet.id
   tags = {
     Name = var.igw_name
   }
@@ -52,11 +52,11 @@ resource "aws_nat_gateway" "IGW" {
 
 # Create new route table with IGW
 resource "aws_route_table" "public_rt" {
-  vpc_id = aws_vpc.my_test_vpc.id
+  vpc_id = aws_vpc.my_vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.my_ig.id
+    gateway_id = aws_internet_gateway.IGW.id
   }
 
   tags = {
@@ -64,13 +64,13 @@ resource "aws_route_table" "public_rt" {
   }
 }
 
-# Create new route table with IGW
+# Create new route table with NAT Gateway
 resource "aws_route_table" "private_rt" {
   vpc_id = aws_vpc.my_vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_nat_gateway.IGW.id
+    gateway_id = aws_nat_gateway.NATGateWay.id
   }
 
   tags = {
@@ -79,15 +79,65 @@ resource "aws_route_table" "private_rt" {
 }
 
 # Associate route table with subnet
-resource "aws_route_table_association" "public_1_rt_assoc" {
-  subnet_id      = aws_subnet.my_test_subnet.id
+resource "aws_route_table_association" "public_rt_assoc" {
+  subnet_id      = aws_subnet.PublicSubnet.id
   route_table_id = aws_route_table.public_rt.id
+}
+
+# Associate route table with subnet
+resource "aws_route_table_association" "private_rt_assoc" {
+  subnet_id      = aws_subnet.PrivateSubnet.id
+  route_table_id = aws_route_table.private_rt.id
 }
 
 # Creates new security group open to HTTP traffic
 resource "aws_security_group" "app_sg" {
   name   = "HTTP"
-  vpc_id = aws_vpc.my_test_vpc.id
+  vpc_id = aws_vpc.my_vpc.id
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = -1
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+
+# Associate route table with subnet
+
+
+# Creates new security group open to HTTP traffic
+resource "aws_security_group" "SG_Private" {
+  name   = "HTTP"
+  vpc_id = aws_vpc.my_vpc.id
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = -1
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Creates new security group open to HTTP traffic
+resource "aws_security_group" "SG_Public" {
+  name   = "HTTP"
+  vpc_id = aws_vpc.my_vpc.id
 
   ingress {
     from_port   = 80
@@ -110,7 +160,7 @@ resource "aws_instance" "server_a" {
   instance_type = "t2.micro"
 
   subnet_id                   = aws_subnet.PublicSubnet.id
-  vpc_security_group_ids      = [aws_security_group.app_sg.id]
+  vpc_security_group_ids      = [aws_security_group.SG_Public.id]
   associate_public_ip_address = true
 
   user_data = <<-EOF
@@ -123,7 +173,7 @@ resource "aws_instance" "server_a" {
   EOF
 
   tags = {
-    "Name" : var.ec2_name
+    "Name" : var.server_a_ec2_name
   }
 }
 
@@ -133,11 +183,11 @@ resource "aws_instance" "server_b" {
   instance_type = "t2.micro"
 
   subnet_id                   = aws_subnet.PrivateSubnet.id
-  vpc_security_group_ids      = [aws_security_group.app_sg.id]
+  vpc_security_group_ids      = [aws_security_group.SG_Private.id]
   associate_public_ip_address = false
 
 
   tags = {
-    "Name" : var.ec2_name
+    "Name" : var.server_b_ec2_name
   }
 }
