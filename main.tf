@@ -15,9 +15,9 @@ resource "aws_vpc" "my_vpc" {
 
 # Public Subnet
 resource "aws_subnet" "PublicSubnet" {
-  vpc_id     = aws_vpc.my_vpc.id
-  cidr_block = var.public_subnet_cidr
-
+  vpc_id            = aws_vpc.my_vpc.id
+  cidr_block        = var.public_subnet_cidr
+  availability_zone = "us-east-1a"
   tags = {
     Name = var.public_subnet_name
   }
@@ -25,8 +25,9 @@ resource "aws_subnet" "PublicSubnet" {
 
 # Private Subnet
 resource "aws_subnet" "PrivateSubnet" {
-  vpc_id     = aws_vpc.my_vpc.id
-  cidr_block = var.private_subnet_cidr
+  vpc_id            = aws_vpc.my_vpc.id
+  cidr_block        = var.private_subnet_cidr
+  availability_zone = "us-east-1a"
 
   tags = {
     Name = var.private_subnet_name
@@ -42,9 +43,18 @@ resource "aws_internet_gateway" "IGW" {
   }
 }
 
+resource "aws_eip" "nat_gateway_eip" {
+  depends_on = [
+    aws_route_table_association.RT-IG-Association
+  ]
+  vpc = true
+}
+
 # Create a route to the NAT GateWay
 resource "aws_nat_gateway" "NATGateWay" {
-  subnet_id = aws_subnet.PrivateSubnet.id
+  subnet_id         = aws_subnet.PrivateSubnet.id
+  connectivity_type = "public"
+  allocation_id     = aws_eip.nat_gateway_eip.id
   tags = {
     Name = var.igw_name
   }
@@ -89,30 +99,6 @@ resource "aws_route_table_association" "private_rt_assoc" {
   subnet_id      = aws_subnet.PrivateSubnet.id
   route_table_id = aws_route_table.private_rt.id
 }
-
-# Creates new security group open to HTTP traffic
-resource "aws_security_group" "app_sg" {
-  name   = "HTTP"
-  vpc_id = aws_vpc.my_vpc.id
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = -1
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-
-# Associate route table with subnet
-
 
 # Creates new security group open to HTTP traffic
 resource "aws_security_group" "SG_Private" {

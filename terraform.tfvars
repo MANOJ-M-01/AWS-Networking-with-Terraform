@@ -3,7 +3,7 @@ vpc_cidr = "10.0.0.0/16"
 vpc_name = "MyTestVPC"
 
 ##### PUBLIC SUBNET #####
-public_subnet_cidr = "10.0.0.0/16"
+public_subnet_cidr = "10.0.0.0/24"
 public_subnet_name = "PUBLIC_SUBNET"
 
 ##### PRIVATE SUBNET #####
