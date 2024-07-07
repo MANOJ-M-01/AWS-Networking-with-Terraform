@@ -5,28 +5,28 @@ provider "aws" {
 
 # Create VPC
 resource "aws_vpc" "main_network" {
-  cidr_block = "10.0.0.0/16"
+  cidr_block = var.vpc_cidr
   tags = {
-    Name = "main_network"
+    Name = var.vpc_name
   }
 }
 
 # Create Public Subnet
 resource "aws_subnet" "public_subnet" {
   vpc_id                  = aws_vpc.main_network.id
-  cidr_block              = "10.0.1.0/24"
+  cidr_block              = var.public_subnet_cidr
   map_public_ip_on_launch = true
   tags = {
-    Name = "public_subnet"
+    Name = var.public_subnet_name
   }
 }
 
 # Create Private Subnet
 resource "aws_subnet" "private_subnet" {
   vpc_id     = aws_vpc.main_network.id
-  cidr_block = "10.0.2.0/24"
+  cidr_block = var.private_subnet_cidr
   tags = {
-    Name = "private_subnet"
+    Name = var.private_subnet_name
   }
 }
 
@@ -34,7 +34,7 @@ resource "aws_subnet" "private_subnet" {
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main_network.id
   tags = {
-    Name = "main_network_igw"
+    Name = var.igw_name
   }
 }
 
@@ -42,11 +42,11 @@ resource "aws_internet_gateway" "igw" {
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.main_network.id
   route {
-    cidr_block = "0.0.0.0/0"
+    cidr_block = var.public_route_table_cidr
     gateway_id = aws_internet_gateway.igw.id
   }
   tags = {
-    Name = "public_rt"
+    Name = var.public_route_table_name
   }
 }
 
@@ -60,11 +60,11 @@ resource "aws_route_table_association" "public_association" {
 resource "aws_route_table" "private_rt" {
   vpc_id = aws_vpc.main_network.id
   route {
-    cidr_block     = "0.0.0.0/0"
+    cidr_block     = var.private_route_table_cidr
     nat_gateway_id = aws_nat_gateway.nat.id
   }
   tags = {
-    Name = "private_rt"
+    Name = var.private_route_table_name
   }
 }
 
@@ -84,15 +84,14 @@ resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat_eip.id
   subnet_id     = aws_subnet.public_subnet.id
   tags = {
-    Name = "main_network_nat"
+    Name = var.nat_name
   }
 }
-
 
 # Create Public http and https Security Group
 resource "aws_security_group" "public_sg" {
   vpc_id      = aws_vpc.main_network.id
-  name        = "public_sg"
+  name        = var.public_security_group_name
   description = "Allow HTTP and HTTPS outbound traffic"
 
   ingress {
@@ -117,14 +116,14 @@ resource "aws_security_group" "public_sg" {
   }
 
   tags = {
-    Name = "public_sg"
+    Name = var.public_security_group_name
   }
 }
 
 # Create Security Group for Private Instance
 resource "aws_security_group" "private_sg" {
   vpc_id      = aws_vpc.main_network.id
-  name        = "private_sg"
+  name        = var.private_security_group_name
   description = "Allow SSH from public subnet"
 
   ingress {
@@ -135,7 +134,7 @@ resource "aws_security_group" "private_sg" {
   }
 
   tags = {
-    Name = "private_sg"
+    Name = var.private_security_group_name
   }
 }
 
@@ -147,11 +146,11 @@ resource "aws_security_group" "private_sg" {
 
 # Create Public EC2 Instance
 resource "aws_instance" "public_instance" {
-  ami                         = "ami-04a81a99f5ec58529" # Latest Ubuntu AMI ID
-  instance_type               = "t2.micro"
+  ami                         = var.ec2_ami
+  instance_type               = var.ec2_type
   subnet_id                   = aws_subnet.public_subnet.id
   vpc_security_group_ids      = [aws_security_group.public_sg.id]
-  key_name                    = "my_public_key"
+  key_name                    = var.ssh_key_name
   associate_public_ip_address = true
 
   user_data = <<-EOF
@@ -162,20 +161,20 @@ resource "aws_instance" "public_instance" {
               EOF
 
   tags = {
-    Name = "public_instance"
+    Name = var.public_ec2_name
   }
 }
 
 # Create Private EC2 Instance
 resource "aws_instance" "private_instance" {
-  ami                    = "ami-04a81a99f5ec58529" # Latest Ubuntu AMI ID
-  instance_type          = "t2.micro"
+  ami                    = var.ec2_ami
+  instance_type          = var.ec2_type
   subnet_id              = aws_subnet.private_subnet.id
   vpc_security_group_ids = [aws_security_group.private_sg.id]
   # key_name        = aws_key_pair.mypublickey.key_name
   associate_public_ip_address = false
 
   tags = {
-    Name = "private_instance"
+    Name = var.private_ec2_name
   }
 }
