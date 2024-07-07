@@ -33,5 +33,3 @@ ec2_type         = "t2.micro"
 public_ec2_name  = "public_instance"
 private_ec2_name = "private_instance"
 ssh_key_name     = "my_public_key"
-
-
