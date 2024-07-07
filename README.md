@@ -98,6 +98,7 @@ This will create all the resources as described above and output the IDs and pub
 
 ### Terraform Commands
 - `terraform init`
+- `terraform fmt` format terraform files
 - `terraform plan`
 - `terraform apply`
 - `terraform destroy`
