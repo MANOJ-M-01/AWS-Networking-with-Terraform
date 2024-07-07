@@ -18,6 +18,10 @@ This Terraform configuration sets up a basic infrastructure on AWS, which includ
 
 ![Network Diagram](./Network%20Diagram.png)
 
+## AWS Resource Diagram
+
+![Network Diagram](./graph.svg)
+
 ## Resources Created
 
 1. **VPC**
